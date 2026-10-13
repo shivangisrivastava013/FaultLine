@@ -1,0 +1,51 @@
+name: FaultLine CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate synthetic dataset splits
+        run: |
+          python -m simulation.generate_data
+
+      - name: Train baseline, champion, and candidate models
+        run: |
+          python -m src.models.train
+
+      - name: Run unit and integration tests
+        run: |
+          pytest tests/ -v
+
+      - name: Verify API and benchmark smoke check
+        run: |
+          # Start API server in background
+          uvicorn src.api.main:app --host 127.0.0.1 --port 8000 &
+          API_PID=$!
+          # Wait for API to become ready
+          sleep 5
+          curl -f http://127.0.0.1:8000/health
+          # Run 1-pass benchmark smoke evaluation
+          python -m evaluation.run_benchmarks --url http://127.0.0.1:8000 --runs 1
+          # Kill API process
+          kill $API_PID
