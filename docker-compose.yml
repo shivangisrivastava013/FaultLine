@@ -1,0 +1,107 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: faultline-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: faultline
+      POSTGRES_PASSWORD: faultline_password
+      POSTGRES_DB: faultline_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faultline -d faultline_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faultline-api
+    restart: always
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://faultline:faultline_password@postgres:5432/faultline_db
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-faultline-secret-key}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faultline-worker
+    restart: always
+    command: python -m src.monitoring.worker --loop --interval 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://faultline:faultline_password@postgres:5432/faultline_db
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faultline-dashboard
+    restart: always
+    command: streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://faultline:faultline_password@postgres:5432/faultline_db
+      PREDICTION_API_URL: http://api:8000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: faultline-prometheus
+    restart: always
+    volumes:
+      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: faultline-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./deployment/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
