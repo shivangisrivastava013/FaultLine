@@ -1,0 +1,19 @@
+scenario,requests_sent,false_alert_count,is_clean,observed_mae,p95_latency_ms,run_index,seed,timestamp,detected,detection_delay_seconds,recovery_time_seconds,incident_id,affected_features,pre_rollback_mae,post_rollback_mae,restored_version,smoke_test_passed
+clean_traffic,50.0,0.0,True,1.89,17.03,1,42,2026-10-13T19:38:25.447371+00:00,,,,,,,,,
+clean_traffic,50.0,0.0,True,1.98,16.83,2,59,2026-10-13T19:38:31.997826+00:00,,,,,,,,,
+clean_traffic,50.0,0.0,True,2.07,16.81,3,76,2026-10-13T19:38:38.429314+00:00,,,,,,,,,
+latency_spike,,,,,,1,42,2026-10-13T19:38:55.693359+00:00,True,15.06,1.66,inc_high_latency_621ea1eb,,,,,
+latency_spike,,,,,,2,59,2026-10-13T19:39:12.504974+00:00,True,14.74,1.54,inc_high_latency_6c7873bb,,,,,
+latency_spike,,,,,,3,76,2026-10-13T19:39:29.827161+00:00,True,15.19,1.58,inc_high_latency_705efc83,,,,,
+server_errors,,,,,,1,42,2026-10-13T19:39:34.202396+00:00,True,2.28,1.54,inc_server_errors_cfdcab51,,,,,
+server_errors,,,,,,2,59,2026-10-13T19:39:38.434043+00:00,True,2.16,1.51,inc_server_errors_a8a34cbb,,,,,
+server_errors,,,,,,3,76,2026-10-13T19:39:42.788151+00:00,True,2.25,1.58,inc_server_errors_a98fd54a,,,,,
+invalid_input_spike,,,,,,1,42,2026-10-13T19:39:48.009330+00:00,False,,1.92,,,,,,
+invalid_input_spike,,,,,,2,59,2026-10-13T19:39:53.092563+00:00,True,2.61,1.92,inc_validation_failures_8dec7a13,,,,,
+invalid_input_spike,,,,,,3,76,2026-10-13T19:39:58.186439+00:00,True,2.62,1.92,inc_validation_failures_0b76de48,,,,,
+data_drift,,,,,,1,42,2026-10-13T19:40:03.815924+00:00,True,2.85,2.23,inc_data_drift_8df2d84b,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level']",,,,
+data_drift,,,,,,2,59,2026-10-13T19:40:09.734531+00:00,True,3.06,2.31,inc_data_drift_7255c134,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level']",,,,
+data_drift,,,,,,3,76,2026-10-13T19:40:15.592102+00:00,True,2.98,2.33,inc_data_drift_021e3b6b,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level', 'weather']",,,,
+bad_model_release,,,,,,1,42,2026-10-13T19:40:23.433842+00:00,True,3.59,3.7,inc_model_regression_c07eb88a,,17.45,9.71,v1,True
+bad_model_release,,,,,,2,59,2026-10-13T19:40:31.111151+00:00,True,3.58,3.55,inc_model_regression_76633829,,14.45,11.44,v1,True
+bad_model_release,,,,,,3,76,2026-10-13T19:40:39.142238+00:00,True,3.75,3.74,inc_model_regression_aa25c434,,12.47,10.81,v1,True
