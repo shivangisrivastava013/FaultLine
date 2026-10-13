@@ -1,0 +1,89 @@
+# FaultLine Monitoring Rules and Alert Thresholds Configuration
+
+version: "1.0"
+
+service_name: "faultline-delivery-prediction"
+
+# Window evaluation parameters
+window:
+  evaluation_interval_seconds: 5
+  window_size_seconds: 60
+  min_request_count: 10
+
+# 1. Operational Rules
+operational_rules:
+  high_latency:
+    enabled: true
+    metric: "p95_latency_ms"
+    warning_threshold_ms: 150.0
+    critical_threshold_ms: 400.0
+    min_samples: 10
+    consecutive_windows: 1
+    severity: "warning"
+    recommended_action: "Inspect container CPU/memory pressure and upstream query bottlenecks. Check if chaos latency fault was injected."
+
+  server_errors:
+    enabled: true
+    metric: "error_rate_percent"
+    warning_threshold_percent: 5.0
+    critical_threshold_percent: 15.0
+    min_samples: 10
+    severity: "critical"
+    recommended_action: "Inspect API exception logs and database connectivity. Recover by resolving unhandled exceptions or disabling fault injection."
+
+  validation_failures:
+    enabled: true
+    metric: "validation_failure_rate_percent"
+    warning_threshold_percent: 10.0
+    critical_threshold_percent: 25.0
+    min_samples: 10
+    severity: "warning"
+    recommended_action: "Identify client producer sending schema violations or missing keys. Correct simulated traffic producer schema."
+
+# 2. Data Quality and Drift Rules
+data_rules:
+  missing_values:
+    enabled: true
+    max_missing_rate_percent: 1.0
+    severity: "warning"
+    recommended_action: "Inspect data ingestion pipeline for null feature propagation."
+
+  data_drift:
+    enabled: true
+    ks_pvalue_threshold: 0.01
+    psi_threshold: 0.25
+    min_samples: 25
+    severity: "warning"
+    features:
+      - "distance_km"
+      - "restaurant_load"
+      - "hour_of_day"
+      - "traffic_level"
+      - "weather"
+    recommended_action: "Covariate shift detected in input features. Review market expansion or seasonal shifts. Verify if model retraining or calibration is required."
+
+  prediction_drift:
+    enabled: true
+    ks_pvalue_threshold: 0.01
+    min_samples: 25
+    severity: "warning"
+    recommended_action: "Prediction distribution has significantly shifted from baseline reference. Inspect input feature shifts as early indicator before outcomes arrive."
+
+# 3. Model Accuracy & Outcome Rules
+accuracy_rules:
+  model_regression:
+    enabled: true
+    metric: "window_mae"
+    threshold_mae_minutes: 5.5
+    relative_mae_multiplier: 1.6
+    min_outcomes: 12
+    severity: "critical"
+    recommended_action: "Severe prediction accuracy degradation detected. Perform audited model rollback to previous approved champion model."
+
+  outcome_delay:
+    enabled: true
+    min_predictions: 25
+    min_outcome_ratio: 0.20
+    freshness_threshold_seconds: 180
+    severity: "warning"
+    recommended_action: "Ground truth outcome ingestion appears stalled or delayed. Verify outcome streaming worker health."
