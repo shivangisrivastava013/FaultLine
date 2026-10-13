@@ -1,0 +1,37 @@
+{
+  "model_version": "v0_linear",
+  "model_type": "RidgeLinearRegression",
+  "status": "baseline",
+  "val_metrics": {
+    "overall_mae": 4.242,
+    "overall_rmse": 6.213,
+    "overall_r2": 0.8312,
+    "segment_mae_traffic": {
+      "low": 4.34,
+      "medium": 2.872,
+      "high": 3.53,
+      "jam": 12.745
+    },
+    "sample_count": 2250
+  },
+  "test_metrics": {
+    "overall_mae": 4.627,
+    "overall_rmse": 7.274,
+    "overall_r2": 0.8345,
+    "segment_mae_traffic": {
+      "low": 4.645,
+      "medium": 2.81,
+      "high": 3.553,
+      "jam": 13.436
+    },
+    "sample_count": 2250
+  },
+  "features": [
+    "distance_km",
+    "hour_of_day",
+    "restaurant_load",
+    "traffic_level",
+    "weather"
+  ],
+  "seed": 42
+}

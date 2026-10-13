@@ -1,0 +1,38 @@
+{
+  "model_version": "v2_degraded",
+  "model_type": "HistGradientBoostingRegressor_Underfit",
+  "status": "candidate_degraded",
+  "degradation_reason": "Trained on underfit 250 samples biased exclusively toward clear weather & low traffic",
+  "val_metrics": {
+    "overall_mae": 9.912,
+    "overall_rmse": 15.877,
+    "overall_r2": -0.1024,
+    "segment_mae_traffic": {
+      "low": 5.716,
+      "medium": 7.922,
+      "high": 16.189,
+      "jam": 33.067
+    },
+    "sample_count": 2250
+  },
+  "test_metrics": {
+    "overall_mae": 11.574,
+    "overall_rmse": 18.993,
+    "overall_r2": -0.128,
+    "segment_mae_traffic": {
+      "low": 6.083,
+      "medium": 8.11,
+      "high": 16.673,
+      "jam": 39.855
+    },
+    "sample_count": 2250
+  },
+  "features": [
+    "distance_km",
+    "hour_of_day",
+    "restaurant_load",
+    "traffic_level",
+    "weather"
+  ],
+  "seed": 42
+}
