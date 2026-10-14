@@ -24,7 +24,7 @@ To establish high scientific and operational validity, FaultLine evaluates detec
 - **Traffic Generator**: Synchronous HTTP load replayer operating at 20.0 requests/sec.
 - **Serving Architecture**: FastAPI with Uvicorn ASGI server.
 - **Monitoring Schedule**: Rolling 30-second analytical windows evaluated on a 5-second cadence.
-- **Model Registry**: Champion `HistGradientBoostingRegressor` (v1) and degraded candidate (v2).
+- **Model Registry**: Champion `HistGradientBoostingRegressor` (`champion_v1`) and degraded candidate (`candidate_degraded_v2`).
 
 ---
 
@@ -33,11 +33,13 @@ To establish high scientific and operational validity, FaultLine evaluates detec
 | Scenario | Repetitions | Detection Rate | Median Delay (s) | Delay Range (s) | Median Recovery (s) | False Alerts |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Clean Control Traffic** | 3 | **100.0% Clean** | N/A | N/A | N/A | **0 total** |
-| **Latency Spike** | 3 | **100.0%** (3/3) | 14.8s | [13.6s - 15.2s] | 1.6s | 0 |
-| **Server Errors (5xx)** | 3 | **100.0%** (3/3) | 2.2s | [2.1s - 2.3s] | 1.6s | 0 |
-| **Invalid Input Spike (422)** | 3 | **100.0%** (3/3) | 2.5s | [2.4s - 2.9s] | 1.9s | 0 |
-| **Covariate Data Drift** | 3 | **100.0%** (3/3) | 3.1s | [3.1s - 3.3s] | 2.3s | 0 |
-| **Bad Model Release** | 3 | **100.0%** (3/3) | 3.7s | [3.6s - 3.9s] | 3.8s | 0 |
+| **Latency Spike** | 3 | **100.0%** (3/3) | 15.1s | [14.7s - 15.2s] | 1.6s | 0 |
+| **Server Errors (5xx)** | 3 | **100.0%** (3/3) | 2.2s | [2.2s - 2.3s] | 1.5s | 0 |
+| **Invalid Input Spike (422)** | 3 | **66.7%** (2/3) | 2.6s | [2.6s - 2.6s] | 1.9s | 0 |
+| **Covariate Data Drift** | 3 | **100.0%** (3/3) | 3.0s | [2.8s - 3.1s] | 2.3s | 0 |
+| **Bad Model Release** | 3 | **100.0%** (3/3) | 3.6s | [3.6s - 3.8s] | 3.7s | 0 |
+
+Overall, FaultLine achieved **93.3% fault detection** across 15 injected-fault runs (14/15 detected; invalid input spike detected in 2/3 runs), with **zero false alerts** across 3 clean baseline runs. Model rollback to `champion_v1` restored healthy prediction accuracy to **1.82–1.91 min MAE** (down from >10.5 min degraded MAE).
 
 ---
 

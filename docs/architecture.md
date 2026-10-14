@@ -42,9 +42,9 @@ flowchart TD
   - `POST /predict`: Performs input validation against physical boundaries, generates inference using the active pipeline, records structured telemetry in the database, and exposes Prometheus metric observations.
   - `GET /model-info`: Returns active model metadata, feature lists, and validation metrics.
   - `POST /outcomes`: Ingests delayed delivery durations matched to predictions via `request_id`.
-  - `POST /rollback`: Authenticated model rollback with mandatory pre-activation smoke tests.
-  - `POST /admin/activate-model`: Model version promotion endpoint.
-  - `POST /admin/inject-fault`: Chaos injection controls for controlled benchmarking and demonstrations.
+  - `POST /rollback`: Authenticated model rollback with mandatory pre-activation smoke tests (requires `X-API-Key`).
+  - `POST /admin/activate-model`: Model version promotion endpoint (requires `X-API-Key`).
+  - `POST /admin/inject-fault`: Chaos injection controls for controlled benchmarking and demonstrations (requires `X-API-Key`).
   - `GET /metrics`: Prometheus metric scrape endpoint.
 
 ### 2.2 Model Pipeline & Registry (`src/models/`)
