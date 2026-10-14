@@ -12,15 +12,19 @@ Scenario: Bad Model Release & Audited Rollback.
 from __future__ import annotations
 
 import time
+import os
 import requests
 from simulation.replay_traffic import TrafficReplayer
 from src.incidents.database import SessionLocal
 from src.monitoring.worker import MonitoringWorker
-from src.incidents.models import Incident
+from src.incidents.models import Incident, utcnow
 
 
 def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict:
     print("\n--- Running Scenario: Bad Model Release & Rollback ---")
+    admin_key = os.getenv("ADMIN_API_KEY", "faultline_dev_secret_key")
+    admin_headers = {"X-API-Key": admin_key}
+
     db = SessionLocal()
     db.query(Incident).filter(Incident.incident_type == "model_regression").delete()
     db.commit()
@@ -29,6 +33,7 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
 
     # 1. Activate degraded model
     t_onset = time.time()
+    t_onset_dt = utcnow()
     requests.post(
         f"{api_url}/admin/activate-model",
         params={
@@ -36,13 +41,14 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
             "actor": "release_bot",
             "reason": "Canary deployment of v2 candidate",
         },
+        headers=admin_headers,
     )
 
     # 2. Replay traffic with outcomes
     replayer.replay(num_requests=30, rate_per_second=20.0, simulate_outcomes=True, outcome_delay_seconds=0.2)
 
     # 3. Detect regression
-    worker.process_window(db)
+    worker.process_window(db, since=t_onset_dt)
     t_detect = time.time()
 
     inc = (
@@ -54,9 +60,11 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
     detected = inc is not None
     det_delay = round(t_detect - t_onset, 2) if detected else None
     pre_rollback_mae = inc.evidence.get("metrics", {}).get("window_mae") if inc else None
+    inc_id = inc.incident_id if inc else None
 
     # 4. Execute rollback
     t_rec_start = time.time()
+    t_post_start = utcnow()
     rb_res = requests.post(
         f"{api_url}/rollback",
         json={
@@ -64,11 +72,12 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
             "actor": "sre_lead",
             "reason": "Remediating model_regression incident",
         },
+        headers=admin_headers,
     ).json()
 
-    # 5. Verify restored behavior
+    # 5. Verify restored behavior on post-rollback requests
     replayer.replay(num_requests=30, rate_per_second=20.0, simulate_outcomes=True, outcome_delay_seconds=0.2)
-    win = worker.process_window(db)
+    win = worker.process_window(db, since=t_post_start)
     t_rec_end = time.time()
     rec_time = round(t_rec_end - t_rec_start, 2)
     post_rollback_mae = win.mae if win else None
@@ -83,7 +92,7 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
         "post_rollback_mae": post_rollback_mae,
         "restored_version": rb_res.get("active_version"),
         "smoke_test_passed": rb_res.get("smoke_test_passed"),
-        "incident_id": inc.incident_id if inc else None,
+        "incident_id": inc_id,
     }
 
 

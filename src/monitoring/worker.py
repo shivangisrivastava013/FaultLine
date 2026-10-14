@@ -46,10 +46,18 @@ class MonitoringWorker:
         self.drift_detector = DriftDetector(reference_data_path=reference_data_path)
         self.rule_engine = RuleEngine()
 
-    def process_window(self, db: Session) -> Optional[MonitoringWindow]:
+    def process_window(
+        self,
+        db: Session,
+        since: Optional[datetime.datetime] = None,
+    ) -> Optional[MonitoringWindow]:
         """Processes the most recent time window of prediction requests and outcomes."""
+        db.expire_all()
         now = utcnow()
-        window_start = now - datetime.timedelta(seconds=self.window_size_seconds)
+        if since is not None:
+            window_start = since
+        else:
+            window_start = now - datetime.timedelta(seconds=self.window_size_seconds)
 
         # 1. Fetch prediction records
         records = (

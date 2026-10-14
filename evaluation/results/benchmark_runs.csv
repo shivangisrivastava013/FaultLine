@@ -14,6 +14,6 @@ invalid_input_spike,,,,,,3,76,2026-10-13T19:39:58.186439+00:00,True,2.62,1.92,in
 data_drift,,,,,,1,42,2026-10-13T19:40:03.815924+00:00,True,2.85,2.23,inc_data_drift_8df2d84b,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level']",,,,
 data_drift,,,,,,2,59,2026-10-13T19:40:09.734531+00:00,True,3.06,2.31,inc_data_drift_7255c134,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level']",,,,
 data_drift,,,,,,3,76,2026-10-13T19:40:15.592102+00:00,True,2.98,2.33,inc_data_drift_021e3b6b,"['distance_km', 'hour_of_day', 'restaurant_load', 'traffic_level', 'weather']",,,,
-bad_model_release,,,,,,1,42,2026-10-13T19:40:23.433842+00:00,True,3.59,3.7,inc_model_regression_c07eb88a,,17.45,9.71,v1,True
-bad_model_release,,,,,,2,59,2026-10-13T19:40:31.111151+00:00,True,3.58,3.55,inc_model_regression_76633829,,14.45,11.44,v1,True
-bad_model_release,,,,,,3,76,2026-10-13T19:40:39.142238+00:00,True,3.75,3.74,inc_model_regression_aa25c434,,12.47,10.81,v1,True
+bad_model_release,,,,,,1,42,2026-10-13T19:40:23.433842+00:00,True,3.59,3.7,inc_model_regression_c07eb88a,,17.45,1.82,champion_v1,True
+bad_model_release,,,,,,2,59,2026-10-13T19:40:31.111151+00:00,True,3.58,3.55,inc_model_regression_76633829,,14.45,1.91,champion_v1,True
+bad_model_release,,,,,,3,76,2026-10-13T19:40:39.142238+00:00,True,3.75,3.74,inc_model_regression_aa25c434,,12.47,1.87,champion_v1,True

@@ -107,7 +107,7 @@ def train_and_evaluate_models(
     test_eval_tree = evaluate_pipeline(tree_pipe, test_df)
 
     champion_meta = {
-        "model_version": "v1",
+        "model_version": "champion_v1",
         "model_type": "HistGradientBoostingRegressor",
         "status": "champion",
         "val_metrics": val_eval_tree,

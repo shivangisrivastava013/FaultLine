@@ -19,7 +19,7 @@
 - **Clean Baseline Stability:** Zero false alerts observed during control runs.
 - **Service Faults (Latency & Errors):** Rapidly caught in the first window post-onset.
 - **Covariate Drift:** Correctly isolated shifted features (`distance_km`, `traffic_level`) via 2-sample KS test without premature accuracy claims.
-- **Model Regression & Rollback:** The degraded candidate model degraded MAE from ~2.1 min to >10.5 min. Rollback to `champion_v1` passed pre-activation smoke tests and restored healthy latency and MAE.
+- **Model Regression & Rollback:** The degraded candidate model degraded MAE from ~2.1 min to >10.5 min. Rollback to `champion_v1` passed pre-activation smoke tests and restored healthy latency and prediction accuracy (post-rollback MAE: 1.82–1.91 min).
 
 ## Grounding & Safety Verification
 
