@@ -23,20 +23,60 @@ class InvestigationAnalyzer:
 
     def __init__(self, timeout_seconds: float = 6.0):
         self.timeout_seconds = timeout_seconds
-        self.api_key = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
     def investigate(self, evidence_bundle: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generates an investigation report. Attempts external LLM first if configured;
-        falls back to deterministic grounded analysis on timeout or missing credentials.
+        Generates an investigation report. Attempts Gemini or OpenAI LLM first if configured;
+        falls back to deterministic grounded analysis on timeout, error, or missing credentials.
         """
-        if self.api_key and os.getenv("OPENAI_API_KEY"):
+        if os.getenv("GEMINI_API_KEY"):
+            try:
+                return self._call_gemini_llm(evidence_bundle)
+            except Exception as e:
+                print(f"[InvestigationAnalyzer] Gemini LLM call failed or timed out ({e}). Using deterministic fallback.")
+        elif os.getenv("OPENAI_API_KEY"):
             try:
                 return self._call_openai_llm(evidence_bundle)
             except Exception as e:
-                print(f"[InvestigationAnalyzer] LLM call failed or timed out ({e}). Using deterministic fallback.")
+                print(f"[InvestigationAnalyzer] OpenAI LLM call failed or timed out ({e}). Using deterministic fallback.")
 
         return self._generate_deterministic_analysis(evidence_bundle)
+
+    def _call_gemini_llm(self, evidence_bundle: Dict[str, Any]) -> Dict[str, Any]:
+        """Calls Google Gemini API with strict structured JSON output instructions."""
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise ValueError("GEMINI_API_KEY is not set")
+
+        prompt = (
+            "You are an expert SRE and ML Operations investigator analyzing a production failure in the delivery prediction service.\n"
+            "Below is a structured evidence bundle containing verified evidence items with unique IDs.\n\n"
+            f"Evidence Bundle:\n{json.dumps(evidence_bundle, indent=2)}\n\n"
+            "Requirements:\n"
+            "1. Output MUST be valid JSON with keys: summary, observations, possible_causes, evidence_ids, recommended_checks, suggested_action.\n"
+            "2. Every observation MUST explicitly cite one or more evidence IDs in square brackets (e.g. [EVID-METRIC-1], [EVID-DEP-1]).\n"
+            "3. Every possible cause MUST be prefixed with '[Hypothesis]'.\n"
+            "4. If any critical evidence is missing, state it under observations or summary as an uncertainty statement.\n"
+            "5. You cannot execute rollbacks or actions; only recommend them.\n"
+        )
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        with httpx.Client(timeout=self.timeout_seconds) as client:
+            resp = client.post(url, json=body)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["candidates"][0]["content"]["parts"][0]["text"]
+            parsed = json.loads(content)
+            self._validate_grounding(parsed, evidence_bundle)
+            return parsed
 
     def _call_openai_llm(self, evidence_bundle: Dict[str, Any]) -> Dict[str, Any]:
         """Calls OpenAI compatible endpoint with strict JSON schema instructions."""
