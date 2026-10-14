@@ -43,7 +43,14 @@ from src.investigation.analyzer import InvestigationAnalyzer
 
 
 API_BASE_URL = os.getenv("PREDICTION_API_URL", "http://localhost:8000")
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "faultline_dev_secret_key")
 REF_DATA_PATH = "data/reference_baseline.parquet"
+
+
+def get_admin_headers() -> Dict[str, str]:
+    """Provides X-API-Key header for administrative operations."""
+    key = st.session_state.get("admin_api_key") or os.getenv("ADMIN_API_KEY", "faultline_dev_secret_key")
+    return {"X-API-Key": key} if key else {}
 
 st.set_page_config(
     page_title="FaultLine | ML Incident Observability & Recovery",
@@ -122,37 +129,67 @@ def main():
     else:
         st.sidebar.error(f"API {health_info.get('status').title()} at {API_BASE_URL}")
 
+    # Administrative Authentication
+    st.sidebar.subheader("Administrative Authentication")
+    current_key = st.session_state.get("admin_api_key", ADMIN_API_KEY)
+    st.session_state["admin_api_key"] = st.sidebar.text_input(
+        "Admin API Key (X-API-Key)",
+        value=current_key,
+        type="password",
+        help="Required for model rollback, activation, and chaos injection endpoints.",
+    )
+
     # Chaos Injection Quick Buttons
     st.sidebar.subheader("Inject Failures (Chaos)")
     col_s1, col_s2 = st.sidebar.columns(2)
     with col_s1:
-        if st.button("⏱️ Latency Spike", use_container_width=True):
+        if st.button("Latency Spike", use_container_width=True):
             try:
-                requests.post(f"{API_BASE_URL}/admin/inject-fault", json={"fault_type": "latency_spike", "delay_seconds": 0.8, "probability": 0.9})
+                requests.post(
+                    f"{API_BASE_URL}/admin/inject-fault",
+                    json={"fault_type": "latency_spike", "delay_seconds": 0.8, "probability": 0.9},
+                    headers=get_admin_headers(),
+                )
                 st.sidebar.warning("Latency delay injected!")
             except Exception as e:
                 st.sidebar.error(str(e))
 
-        if st.button("💥 Server Errors", use_container_width=True):
+        if st.button("Server Errors", use_container_width=True):
             try:
-                requests.post(f"{API_BASE_URL}/admin/inject-fault", json={"fault_type": "server_error", "probability": 0.5, "error_status_code": 500})
+                requests.post(
+                    f"{API_BASE_URL}/admin/inject-fault",
+                    json={"fault_type": "server_error", "probability": 0.5, "error_status_code": 500},
+                    headers=get_admin_headers(),
+                )
                 st.sidebar.warning("Server 500 error injected!")
             except Exception as e:
                 st.sidebar.error(str(e))
 
     with col_s2:
-        if st.button("📉 Degraded Model", use_container_width=True):
+        if st.button("Degraded Model", use_container_width=True):
             try:
-                requests.post(f"{API_BASE_URL}/admin/activate-model", params={"version": "candidate_degraded_v2", "actor": "release_bot", "reason": "Canary rollout of v2"})
+                requests.post(
+                    f"{API_BASE_URL}/admin/activate-model",
+                    params={"version": "candidate_degraded_v2", "actor": "release_bot", "reason": "Canary rollout of v2"},
+                    headers=get_admin_headers(),
+                )
                 st.sidebar.warning("Candidate v2_degraded activated!")
                 st.rerun()
             except Exception as e:
                 st.sidebar.error(str(e))
 
-        if st.button("🔄 Reset Clean", use_container_width=True):
+        if st.button("Reset Clean", use_container_width=True):
             try:
-                requests.post(f"{API_BASE_URL}/admin/inject-fault", json={"fault_type": "none"})
-                requests.post(f"{API_BASE_URL}/rollback", json={"target_version": "champion_v1", "actor": "sre", "reason": "Reset to clean"})
+                requests.post(
+                    f"{API_BASE_URL}/admin/inject-fault",
+                    json={"fault_type": "none"},
+                    headers=get_admin_headers(),
+                )
+                requests.post(
+                    f"{API_BASE_URL}/rollback",
+                    json={"target_version": "champion_v1", "actor": "sre", "reason": "Reset to clean"},
+                    headers=get_admin_headers(),
+                )
                 st.sidebar.success("Reset to clean state!")
                 st.rerun()
             except Exception as e:
@@ -388,7 +425,7 @@ def main():
             operator_name = st.text_input("Operator Name", value="sre_oncall")
             reason_text = st.text_input("Rollback Reason", value="Observed accuracy degradation on canary candidate")
 
-            if st.button("🚨 Execute Authenticated Rollback", type="primary"):
+            if st.button("Execute Authenticated Rollback", type="primary"):
                 try:
                     resp = requests.post(
                         f"{API_BASE_URL}/rollback",
@@ -397,6 +434,7 @@ def main():
                             "actor": operator_name,
                             "reason": reason_text,
                         },
+                        headers=get_admin_headers(),
                         timeout=5.0,
                     )
                     if resp.status_code == 200:

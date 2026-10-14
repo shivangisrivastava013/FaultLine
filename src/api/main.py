@@ -21,12 +21,13 @@ import sys
 import time
 import uuid
 import datetime
+import secrets
 from typing import Dict, Any, Optional
 
 # Ensure project root in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Response, status
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, status, Header
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,7 +62,31 @@ from src.monitoring.metrics import (
 
 
 START_TIME = time.time()
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "faultline-secret-key")
+
+
+def verify_admin_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")) -> str:
+    """
+    Validates X-API-Key header against the required ADMIN_API_KEY environment variable.
+    Uses constant-time comparison (secrets.compare_digest) to prevent timing attacks.
+    """
+    configured_key = os.getenv("ADMIN_API_KEY")
+    if not configured_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="ADMIN_API_KEY environment variable is not configured on the server",
+        )
+    if not x_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing X-API-Key administrative header",
+        )
+    if not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid administrative API key",
+        )
+    return x_api_key
+
 
 # In-memory runtime fault injection state (for controlled simulation)
 FAULT_STATE: Dict[str, Any] = {
@@ -78,11 +103,20 @@ app = FastAPI(
     version="0.1.0",
 )
 
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:8501,http://127.0.0.1:8501,http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -341,10 +375,16 @@ def record_outcome(payload: OutcomeRequest, db: Session = Depends(get_db)) -> Ou
     )
 
 
-@app.post("/rollback", response_model=RollbackResponse, tags=["Rollback"])
+@app.post(
+    "/rollback",
+    response_model=RollbackResponse,
+    tags=["Rollback"],
+    dependencies=[Depends(verify_admin_key)],
+)
 def rollback_model(payload: RollbackRequest, db: Session = Depends(get_db)) -> RollbackResponse:
     """
     Performs audited model rollback with mandatory pre-activation smoke test.
+    Protected by X-API-Key administrative dependency.
     """
     target = payload.target_version or "champion_v1"
     try:
@@ -359,7 +399,11 @@ def rollback_model(payload: RollbackRequest, db: Session = Depends(get_db)) -> R
         raise HTTPException(status_code=400, detail=f"Rollback failed: {str(e)}")
 
 
-@app.post("/admin/activate-model", tags=["Admin"])
+@app.post(
+    "/admin/activate-model",
+    tags=["Admin"],
+    dependencies=[Depends(verify_admin_key)],
+)
 def admin_activate_model(
     version: str,
     actor: str = "admin",
@@ -378,7 +422,11 @@ def admin_activate_model(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/admin/inject-fault", tags=["Admin"])
+@app.post(
+    "/admin/inject-fault",
+    tags=["Admin"],
+    dependencies=[Depends(verify_admin_key)],
+)
 def admin_inject_fault(payload: FaultInjectionRequest) -> Dict[str, Any]:
     """Configures simulated live operational faults for testing and demonstrations."""
     global FAULT_STATE
@@ -401,7 +449,11 @@ def admin_inject_fault(payload: FaultInjectionRequest) -> Dict[str, Any]:
     return {"status": "updated", "current_fault_state": FAULT_STATE}
 
 
-@app.get("/admin/fault-status", tags=["Admin"])
+@app.get(
+    "/admin/fault-status",
+    tags=["Admin"],
+    dependencies=[Depends(verify_admin_key)],
+)
 def admin_fault_status() -> Dict[str, Any]:
     """Returns current runtime fault injection state."""
     return FAULT_STATE

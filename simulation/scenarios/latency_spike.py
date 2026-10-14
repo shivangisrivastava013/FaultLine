@@ -10,6 +10,7 @@ Scenario: Latency Spike.
 
 from __future__ import annotations
 
+import os
 import time
 import requests
 from simulation.replay_traffic import TrafficReplayer
@@ -20,12 +21,15 @@ from src.incidents.models import Incident
 
 def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict:
     print("\n--- Running Scenario: Latency Spike ---")
+    admin_key = os.getenv("ADMIN_API_KEY", "faultline_dev_secret_key")
+    admin_headers = {"X-API-Key": admin_key}
+
     db = SessionLocal()
     worker = MonitoringWorker()
     replayer = TrafficReplayer(api_base_url=api_url, seed=seed)
 
     # 1. Warm-up clean & isolate
-    requests.post(f"{api_url}/admin/inject-fault", json={"fault_type": "none"})
+    requests.post(f"{api_url}/admin/inject-fault", json={"fault_type": "none"}, headers=admin_headers)
     db.query(Incident).filter(Incident.incident_type == "high_latency").delete()
     db.commit()
 
@@ -34,6 +38,7 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
     requests.post(
         f"{api_url}/admin/inject-fault",
         json={"fault_type": "latency_spike", "delay_seconds": 0.45, "probability": 0.95},
+        headers=admin_headers,
     )
 
     # 3. Replay traffic during fault
@@ -54,7 +59,7 @@ def run_scenario(api_url: str = "http://localhost:8000", seed: int = 42) -> dict
 
     # 5. Recover
     t_rec_start = time.time()
-    requests.post(f"{api_url}/admin/inject-fault", json={"fault_type": "none"})
+    requests.post(f"{api_url}/admin/inject-fault", json={"fault_type": "none"}, headers=admin_headers)
     replayer.replay(num_requests=20, rate_per_second=25.0, simulate_outcomes=False)
     worker.process_window(db)
     t_rec_end = time.time()
