@@ -65,3 +65,29 @@ def test_sufficient_samples_latency_breach_alerts(db):
     assert len(incidents) == 1
     assert incidents[0].incident_type == "high_latency"
     assert incidents[0].status == "Open"
+
+
+def test_outcome_delay_breach_alerts(db):
+    engine = RuleEngine()
+
+    # 30 samples (>= min_predictions 25) with completed_outcomes = 0 (< 20% ratio)
+    window_summary = {
+        "total_requests": 30,
+        "completed_outcomes": 0,
+        "p95_latency_ms": 20.0,
+        "error_rate_percent": 0.0,
+        "val_failure_rate_percent": 0.0,
+    }
+    df_reqs = pd.DataFrame([{"request_id": f"r_{i}", "status_code": 200, "latency_ms": 20.0} for i in range(30)])
+
+    incidents = engine.evaluate_window(
+        db=db,
+        window_summary=window_summary,
+        df_requests=df_reqs,
+        model_version="champion_v1",
+    )
+    assert len(incidents) == 1
+    assert incidents[0].incident_type == "outcome_delay"
+    assert incidents[0].status == "Open"
+    assert incidents[0].evidence["metrics"]["outcome_ratio"] == 0.0
+

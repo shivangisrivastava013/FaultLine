@@ -166,6 +166,13 @@ class InvestigationAnalyzer:
                 )
                 possible_causes.append("[Hypothesis] Newly activated model candidate (v2_degraded) exhibits poor generalization on non-trivial traffic.")
                 possible_causes.append("[Hypothesis] Underfit training slices causing large prediction divergence in jam traffic.")
+            elif inc_type == "outcome_delay":
+                ratio = metrics.get("outcome_ratio", "N/A")
+                observations.append(
+                    f"Observed delivery outcome completion ratio dropped to {ratio} (below 20% threshold) [EVID-METRIC-1]."
+                )
+                possible_causes.append("[Hypothesis] Delivery outcome ingestion worker or stream subscriber is stalled or disconnected.")
+                possible_causes.append("[Hypothesis] Upstream fulfillment event pipeline experiencing delayed message publishing.")
 
         # 3. Affected features observation
         if "EVID-FEAT-1" in evidence_items:

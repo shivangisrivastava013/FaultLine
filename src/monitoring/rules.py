@@ -233,4 +233,37 @@ class RuleEngine:
                 )
                 triggered_incidents.append(inc)
 
+        # ---------------------------------------------------------------------
+        # 6. Accuracy / Pipeline Rule: Outcome Ingestion Delay
+        # ---------------------------------------------------------------------
+        r_del = self.acc_rules.get("outcome_delay", {})
+        if r_del.get("enabled", True):
+            min_preds = int(r_del.get("min_predictions", 25))
+            min_ratio = float(r_del.get("min_outcome_ratio", 0.20))
+            if total_requests >= min_preds:
+                outcome_ratio = completed_outcomes / float(total_requests)
+                if outcome_ratio < min_ratio:
+                    evidence = {
+                        "rule": "outcome_delay",
+                        "rule_threshold": min_ratio,
+                        "metrics": {
+                            "total_requests": total_requests,
+                            "completed_outcomes": completed_outcomes,
+                            "outcome_ratio": round(outcome_ratio, 3),
+                        },
+                        "sample_requests": sample_requests,
+                    }
+                    inc = IncidentManager.record_alert(
+                        db=db,
+                        incident_type="outcome_delay",
+                        severity=r_del.get("severity", "warning"),
+                        model_version=model_version,
+                        evidence=evidence,
+                        recommended_action=r_del.get(
+                            "recommended_action",
+                            "Ground truth outcome ingestion appears stalled or delayed. Verify outcome streaming worker health.",
+                        ),
+                    )
+                    triggered_incidents.append(inc)
+
         return triggered_incidents

@@ -75,6 +75,18 @@ RUNBOOKS = {
             "Audit candidate model training pipeline for data leakage or bias.",
         ],
     },
+    "outcome_delay": {
+        "title": "Ground Truth Outcome Delay / Feedback Starvation Runbook",
+        "diagnostic_steps": [
+            "Check delivery outcome ingestion pipeline and streaming queue health.",
+            "Verify whether courier delivery completion events are buffering upstream.",
+            "Confirm whether request IDs in outcome stream match recent prediction records.",
+        ],
+        "recovery_actions": [
+            "Restart stalled outcome ingestion worker or flush buffer queue.",
+            "Replay missing delivery outcomes to restore model evaluation metrics.",
+        ],
+    },
 }
 
 

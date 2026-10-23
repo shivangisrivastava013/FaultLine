@@ -12,6 +12,12 @@
 
 ---
 
+## Incident & Investigation Dashboard Preview
+
+![FaultLine Incident Observability & Recovery Dashboard](docs/images/faultline_dashboard.png)
+
+---
+
 ## Architecture Overview
 
 FaultLine decouples the serving layer, the analytical monitoring engine, and the incident investigation dashboard into independent processes:
@@ -44,7 +50,7 @@ flowchart TD
 
 ## Controlled Failure Scenarios
 
-FaultLine is evaluated against 5 distinct injected failure modes plus a clean control baseline:
+FaultLine is evaluated against 6 distinct injected failure modes plus a clean control baseline:
 
 | Scenario | Injected Failure | Detection Approach | Recovery Mechanism |
 | :--- | :--- | :--- | :--- |
@@ -53,12 +59,13 @@ FaultLine is evaluated against 5 distinct injected failure modes plus a clean co
 | **Server Errors** | Simulates 500 internal server exceptions | 5xx error rate exceeds 5.0% warning / 15.0% critical threshold | Resolves exception / clears chaos injection |
 | **Data Drift** | Shifts input feature distributions (extreme long-hauls, severe storm spikes) | Two-sample Kolmogorov-Smirnov test (p < 0.01) & Population Stability Index (PSI > 0.25) | Flags covariate shift without claiming false accuracy drop |
 | **Bad Model Release** | Activates deliberately underfit candidate model (`candidate_degraded_v2`) | Window Mean Absolute Error (MAE) increases from ~2.1 min to > 10.5 min | **Audited Model Rollback** to `champion_v1` with smoke check |
+| **Outcome Ingestion Delay** | Stalls ground truth delivery feedback stream | Outcome completion ratio drops below 20% in window | Flushes outcome queue and resumes ingestion |
 
 ---
 
 ## Benchmark Evaluation Results
 
-Evaluated across repeated controlled runs with fixed random seeds (3 clean control runs and 15 injected-fault runs):
+Evaluated across repeated controlled runs with fixed random seeds (3 clean control runs and 18 injected-fault runs across 6 failure scenarios):
 
 | Scenario | Runs | Detection Rate | Median Detection Delay | Delay Range | Median Recovery Time | False Alerts |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -68,8 +75,9 @@ Evaluated across repeated controlled runs with fixed random seeds (3 clean contr
 | **invalid_input_spike** | 3 | **66.7%** (2/3) | 2.6s | [2.6s - 2.6s] | 1.9s | 0 |
 | **data_drift** | 3 | **100.0%** (3/3) | 3.0s | [2.8s - 3.1s] | 2.3s | 0 |
 | **bad_model_release** | 3 | **100.0%** (3/3) | 3.6s | [3.6s - 3.8s] | 3.7s | 0 |
+| **outcome_delay** | 3 | **100.0%** (3/3) | 2.8s | [2.8s - 2.8s] | 1.8s | 0 |
 
-**Overall Performance:** **93.3% fault detection** across 15 injected-fault runs (14/15 caught; invalid input spike detected in 2/3 runs), with **zero false alerts** across 3 clean baseline runs. Model rollback to `champion_v1` restored healthy prediction performance to **1.8–1.9 min MAE** (down from >10.5 min degraded MAE).
+**Overall Performance:** **94.4% fault detection** across 18 injected-fault runs (17/18 caught; invalid input spike detected in 2/3 runs), with **zero false alerts** across 3 clean baseline runs. Model rollback to `champion_v1` restored healthy prediction performance to **1.82–1.91 min MAE** (down from >10.5 min degraded MAE).
 
 > Full benchmark datasets and metrics are available in [`evaluation/results/benchmark_summary.md`](evaluation/results/benchmark_summary.md) and [`evaluation/results/benchmark_runs.csv`](evaluation/results/benchmark_runs.csv).
 
@@ -135,6 +143,9 @@ streamlit run src/dashboard/app.py
 
 ### Option 2: Docker Compose (Full Stack with Postgres, Prometheus, Grafana)
 
+> [!WARNING]
+> **Production Credential Security:** The default admin key (`ADMIN_API_KEY=faultline_dev_secret_key`), PostgreSQL password (`faultline_password`), and Grafana credentials (`admin`/`admin`) provided in `docker-compose.yml` and `.env.example` are strictly intended for local sandbox development. In any staging or production deployment outside local use, you MUST override `ADMIN_API_KEY`, `POSTGRES_PASSWORD`, and `GF_SECURITY_ADMIN_PASSWORD` with cryptographically secure, high-entropy secrets.
+
 ```bash
 docker compose up -d
 ```
@@ -174,4 +185,4 @@ Access services:
 
 ## Portfolio Summary
 
-> **Built FaultLine**, an ML observability and incident recovery prototype for a delivery-time prediction service using FastAPI, PostgreSQL, and MLflow; evaluated detection across 15 injected-fault runs achieving 93.3% detection rate (zero false alerts across 3 clean baseline runs) with a median detection delay of 2.8s, grounded AI root-cause analysis, and audited model rollback with pre-activation smoke tests restoring prediction error to baseline (< 2.2 min MAE).
+> **Built FaultLine**, an ML observability and incident recovery prototype for a delivery-time prediction service using FastAPI, PostgreSQL, and MLflow; evaluated detection across 18 injected-fault runs achieving 94.4% detection rate (zero false alerts across 3 clean baseline runs) with a median detection delay of 2.8s, grounded AI root-cause analysis, and audited model rollback with pre-activation smoke tests restoring prediction error to baseline (< 2.2 min MAE).

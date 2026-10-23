@@ -32,6 +32,7 @@ from simulation.scenarios import (
     invalid_input_spike,
     data_drift,
     bad_model_release,
+    outcome_delay,
     clean_traffic,
 )
 
@@ -43,6 +44,7 @@ SCENARIO_RUNNERS = {
     "invalid_input_spike": invalid_input_spike.run_scenario,
     "data_drift": data_drift.run_scenario,
     "bad_model_release": bad_model_release.run_scenario,
+    "outcome_delay": outcome_delay.run_scenario,
 }
 
 

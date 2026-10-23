@@ -17,3 +17,6 @@ data_drift,,,,,,3,76,2026-10-13T19:40:15.592102+00:00,True,2.98,2.33,inc_data_dr
 bad_model_release,,,,,,1,42,2026-10-13T19:40:23.433842+00:00,True,3.59,3.7,inc_model_regression_c07eb88a,,17.45,1.82,champion_v1,True
 bad_model_release,,,,,,2,59,2026-10-13T19:40:31.111151+00:00,True,3.58,3.55,inc_model_regression_76633829,,14.45,1.91,champion_v1,True
 bad_model_release,,,,,,3,76,2026-10-13T19:40:39.142238+00:00,True,3.75,3.74,inc_model_regression_aa25c434,,12.47,1.87,champion_v1,True
+outcome_delay,,,,,,1,42,2026-10-13T19:40:47.319012+00:00,True,2.78,1.75,inc_outcome_delay_8f12a43b,,,,,
+outcome_delay,,,,,,2,59,2026-10-13T19:40:55.621451+00:00,True,2.84,1.79,inc_outcome_delay_4e73b91c,,,,,
+outcome_delay,,,,,,3,76,2026-10-13T19:41:03.948210+00:00,True,2.81,1.82,inc_outcome_delay_3b99f21d,,,,,
