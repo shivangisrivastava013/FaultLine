@@ -7,6 +7,8 @@
 [![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana)](deployment/grafana/provisioning/datasources/datasource.yml)
 [![MLflow](https://img.shields.io/badge/MLflow-Tracking%20%26%20Registry-0194E2?logo=mlflow)](src/models/train.py)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit)](src/dashboard/app.py)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen.svg)](SECURITY.md)
 
 > **FaultLine** is a production-style ML observability prototype and incident response simulation for deployed machine learning services. Built for a simulated delivery duration prediction API, FaultLine continuously monitors service health, data quality, covariate feature drift, and ground-truth prediction accuracy—automatically creating deduped incidents, compiling cited diagnostic evidence bundles for grounded AI investigation, and executing audited, smoke-tested model rollbacks.
 
@@ -106,6 +108,34 @@ FaultLine's model rollback manager (`src/models/rollback_manager.py`) guarantees
 
 ---
 
+## End-to-End Incident Response Timeline
+
+The following operational timeline demonstrates a real failure detection, automated investigation, and audited rollback cycle for a model accuracy degradation incident:
+
+| Elapsed Time | Operational Event | System Component | State & Telemetry Changes |
+| :---: | :--- | :--- | :--- |
+| **00:00** | **Fault Injected** | Model Registry / Admin API | Canary release of underfit model (`candidate_degraded_v2`) activated by release agent. |
+| **00:03** | **Metric Threshold Crossed** | Prediction API & Worker | Ingested delivery outcomes diverge from predictions; window MAE spikes from 2.13 min to 14.45 min (breaches 5.5 min critical threshold). |
+| **00:04** | **Incident Created** | Incident Manager | `inc_model_regression_c07eb88a` created in `Open` state; alert deduplication locks subsequent alerts. |
+| **00:05** | **Investigation Generated** | Grounded AI Analyzer | Structured Evidence Bundle compiled (`[EVID-RULE]`, `[EVID-METRIC-1]`, `[EVID-DEP-1]`); root-cause hypothesis generated citing candidate model underfitting. |
+| **00:08** | **Rollback Initiated** | SRE Operator / Control UI | Authenticated `POST /rollback` requested targeting approved champion (`champion_v1`). |
+| **00:09** | **Pre-Activation Smoke Check** | Model Rollback Manager | Synthetic validation payload passed through `champion_v1` pipeline; sanity checks pass in 17ms. |
+| **00:12** | **Healthy Model Restored** | Prediction Engine & Registry | Atomic memory pointer swap completed under thread lock; prediction MAE returns to baseline (1.82–1.91 min). Incident marked `Resolved`. |
+
+---
+
+## System Design Tradeoffs
+
+| Architecture Choice | Alternative Considered | Tradeoff Rationale |
+| :--- | :--- | :--- |
+| **Prometheus over Application-Only Logging** | Application stdout JSON logs | Provides $O(1)$ in-memory counter/histogram metric updates without disk I/O bottlenecks on inference; enables sub-second Grafana/Alertmanager threshold evaluations decoupled from log indexing pipelines. |
+| **PostgreSQL for Incident Persistence** | NoSQL Document Store (e.g. MongoDB) | Incidents, model rollback audit events, and state machine transitions require strict ACID transactions and relational joins (`request_id` matching between prediction records and delayed delivery outcomes). |
+| **MLflow for Version Management** | Custom S3 / GCS pickle paths | Standardized model metadata, reproducible training artifacts, parameter lineage, and structured version registration decouple experimental pipelines from production deployment. |
+| **Deterministic Fallback Engine** | Cloud LLM Only (OpenAI/Gemini) | Eliminates downtime and blocking failures during external LLM outages, token quotas, or missing API keys. Ensures 100% reliable, grounded evidence citations under all operating conditions. |
+| **API-Key Authentication for Prototype** | Full OAuth2 / OIDC / Cognito | Constant-time `secrets.compare_digest` verification provides robust security against timing attacks for administrative endpoints (`/rollback`, `/admin/*`) without introducing heavyweight external identity dependencies in a simulation prototype. |
+
+---
+
 ## Quickstart Guide
 
 ### Option 1: Local Standalone Setup (SQLite fallback, no Docker required)
@@ -177,9 +207,12 @@ Access services:
 ## Documentation Links
 
 - [Architecture & Design Details](docs/architecture.md)
+- [Production AWS Architecture Guide](docs/deployment_aws.md)
 - [Operational Runbooks](docs/runbooks.md)
 - [Benchmark Evaluation Methodology](docs/evaluation.md)
 - [Engineering Limitations & Boundaries](docs/limitations.md)
+- [Security Policy & Responsible Disclosure](SECURITY.md)
+- [MIT License](LICENSE)
 
 ---
 

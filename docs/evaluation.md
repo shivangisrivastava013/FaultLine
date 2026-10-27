@@ -38,8 +38,9 @@ To establish high scientific and operational validity, FaultLine evaluates detec
 | **Invalid Input Spike (422)** | 3 | **66.7%** (2/3) | 2.6s | [2.6s - 2.6s] | 1.9s | 0 |
 | **Covariate Data Drift** | 3 | **100.0%** (3/3) | 3.0s | [2.8s - 3.1s] | 2.3s | 0 |
 | **Bad Model Release** | 3 | **100.0%** (3/3) | 3.6s | [3.6s - 3.8s] | 3.7s | 0 |
+| **Outcome Ingestion Delay** | 3 | **100.0%** (3/3) | 2.8s | [2.8s - 2.8s] | 1.8s | 0 |
 
-Overall, FaultLine achieved **93.3% fault detection** across 15 injected-fault runs (14/15 detected; invalid input spike detected in 2/3 runs), with **zero false alerts** across 3 clean baseline runs. Model rollback to `champion_v1` restored healthy prediction accuracy to **1.82–1.91 min MAE** (down from >10.5 min degraded MAE).
+Overall, FaultLine achieved **94.4% fault detection** across 18 injected-fault runs (17/18 detected; invalid input spike detected in 2/3 runs), with **zero false alerts** across 3 clean baseline runs. Model rollback to `champion_v1` restored healthy prediction accuracy to **1.82–1.91 min MAE** (down from >10.5 min degraded MAE).
 
 ---
 
@@ -70,6 +71,12 @@ Overall, FaultLine achieved **93.3% fault detection** across 15 injected-fault r
 - Ground truth delayed outcomes ingested over 30 deliveries revealed MAE exploding from 2.13 min to > 10.5 min.
 - Model regression incident triggered within 3.7 seconds.
 - Authenticated rollback to `champion_v1` passed pre-activation smoke tests and restored healthy predictions and MAE (< 2.2 min) in 3.8 seconds.
+
+### 4.6 Outcome Ingestion Delay (Feedback Starvation)
+- Simulated an upstream outcome streaming stall where client predictions continued normally but ground truth courier delivery outcomes were withheld (0 delivered).
+- Analytical window detected outcome ratio dropping below the 20% warning threshold (0 completed outcomes across 30 prediction requests).
+- Triggered `outcome_delay` warning in 2.8 seconds, alerting engineers to ingestion pipeline stalls without triggering inappropriate model rollback.
+- Replaying buffered delivery outcomes resolved the alert and restored window MAE tracking in 1.8 seconds.
 
 ---
 
